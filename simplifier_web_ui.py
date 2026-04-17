@@ -10,11 +10,22 @@ from langchain_core.messages import HumanMessage, SystemMessage
 # Load environment variables safely
 load_dotenv()
 
-# Map the .env keys to GOOGLE_API_KEY
-if "GEMINI_API_KEY3" in os.environ and "GOOGLE_API_KEY" not in os.environ:
-    os.environ["GOOGLE_API_KEY"] = os.environ["GEMINI_API_KEY3"]
-elif "GEMINI_API_KEY" in os.environ and "GOOGLE_API_KEY" not in os.environ:
-    os.environ["GOOGLE_API_KEY"] = os.environ["GEMINI_API_KEY"]
+# Resolve API Key from Environment or Streamlit Secrets
+def resolve_api_key():
+    # Try Streamlit Secrets first (for Cloud deployment)
+    if "GEMINI_API_KEY" in st.secrets:
+        os.environ["GOOGLE_API_KEY"] = st.secrets["GEMINI_API_KEY"]
+    elif "GOOGLE_API_KEY" in st.secrets:
+        os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
+    
+    # Then check Environment Variables (for local)
+    if "GOOGLE_API_KEY" not in os.environ:
+        if "GEMINI_API_KEY" in os.environ:
+            os.environ["GOOGLE_API_KEY"] = os.environ["GEMINI_API_KEY"]
+        elif "GEMINI_API_KEY3" in os.environ:
+            os.environ["GOOGLE_API_KEY"] = os.environ["GEMINI_API_KEY3"]
+
+resolve_api_key()
 
 def get_base64_image(image_bytes):
     return base64.b64encode(image_bytes).decode("utf-8")
@@ -185,7 +196,7 @@ def main():
 
     # API Key Validation
     if "GOOGLE_API_KEY" not in os.environ:
-        st.error("Missing Gemini API Key. Please add `GEMINI_API_KEY` to your .env file.")
+        st.error("Missing Gemini API Key. locally, add `GEMINI_API_KEY` to your `.env` file. On Streamlit Cloud, add it to **Secrets**.")
         st.stop()
 
     try:
